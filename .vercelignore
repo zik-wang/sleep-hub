@@ -1,0 +1,10 @@
+.env
+.git
+tools
+__pycache__
+*.pptx
+make_pitch_pptx.py
+.venv
+plugins
+server.py
+启动中控.bat

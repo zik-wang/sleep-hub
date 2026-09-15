@@ -1,0 +1,7 @@
+{"kind":"presence","value":true}
+{"kind":"stage","value":"wake"}
+{"kind":"stage","value":"light"}
+{"kind":"motion","value":true}
+{"kind":"motion","value":false}
+{"kind":"stage","value":"deep"}
+{"kind":"stage","value":"light"}

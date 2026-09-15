@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#12110f" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="color-scheme" content="dark" />
+  <title>睡眠中控 · 第三版</title>
+  <link rel="stylesheet" href="styles.css?v=20" />
+</head>
+<body class="v3" data-col="tonight">
+  <div id="dawn"></div>
+  <div class="v3-shell">
+  <div class="wrap">
+    <div class="m-sticky">
+      <header class="top">
+        <p class="kicker">第三版 · 对话编译</p>
+        <h1>睡眠中控</h1>
+        <nav class="ver-switch" aria-label="版本">
+          <a href="./">第二版</a>
+          <a href="./v3.html" aria-current="page">第三版</a>
+        </nav>
+        <div class="top-clock">
+          <div class="clock" id="clock">--:--:--</div>
+          <div class="status" id="status">未守夜</div>
+        </div>
+        <p class="sub">编译改在对话窗。可以把日志、jsonl、说明丢进去，DeepSeek 读完再收成中控契约。</p>
+      </header>
+      <nav class="m-nav" aria-label="栏目">
+        <button type="button" data-col="tonight">今夜</button>
+        <button type="button" data-col="sense">采集</button>
+        <button type="button" data-col="apply">叫醒</button>
+        <button type="button" data-col="chat">对话</button>
+      </nav>
+    </div>
+
+    <section class="pipe" aria-label="数据管道">
+      <div class="pipe-node">
+        <span class="pipe-lab">采集</span>
+        <b id="pipeSrcN">—</b>
+      </div>
+      <span class="pipe-arr" aria-hidden="true"></span>
+      <div class="pipe-node facts">
+        <span class="pipe-lab">事实</span>
+        <div class="fact-row">
+          <span class="pill" id="pillPresence">在床 <b id="factPresence">—</b></span>
+          <span class="pill" id="pillMotion">体动 <b id="factMotion">—</b></span>
+          <span class="pill" id="pillStage">状态 <b id="factStage">—</b></span>
+        </div>
+      </div>
+      <span class="pipe-arr" aria-hidden="true"></span>
+      <div class="pipe-node">
+        <span class="pipe-lab">方案</span>
+        <b id="pipeRecipe">—</b>
+      </div>
+      <span class="pipe-arr" aria-hidden="true"></span>
+      <div class="pipe-node">
+        <span class="pipe-lab">执行</span>
+        <div class="apply-pills" id="applyPills"></div>
+      </div>
+    </section>
+
+    <div class="cols">
+      <section class="card col-sense">
+        <h2>怎么采集</h2>
+        <p class="hint desk-only">第三版在右侧对话窗编译。这里仍可接入 HTTP 或本地点选。夜里不跑模型。</p>
+        <h3 class="desk-only">我接入的源</h3>
+        <div id="sourcesMine" class="src-grid"></div>
+        <p class="hint empty" id="customEmpty">还没有自建源。下面接一个，或先用「由我指定」。</p>
+        <details class="m-fold" open>
+          <summary>接入 HTTP / 写采集</summary>
+        <div id="sourcesInfra" class="src-grid"></div>
+
+        <div class="add-box open" id="radarBox" hidden>
+          <h3>本机 HiLink 雷达</h3>
+          <p class="hint" id="radarHint">点启动后中控自己跑脚本。先关掉海凌科 Tool，COM 口只能占一次。</p>
+          <label>串口</label>
+          <select id="radarPort"></select>
+          <div class="btns tight">
+            <button id="radarStart" type="button">启动雷达</button>
+            <button id="radarStop" class="ghost" type="button">停止</button>
+          </div>
+          <p class="hint" id="radarLog"></p>
+        </div>
+
+        <div class="add-box open">
+          <h3>接入一个新源</h3>
+          <label>接入方式</label>
+          <select id="srcMode">
+            <option value="http">HTTP JSON（脚本、手环网关、雷达上位机）</option>
+            <option value="pad">本地点选（继续无硬件）</option>
+          </select>
+          <label>这个源叫什么</label>
+          <input id="srcName" placeholder="例如卧室雷达、室友手环、我自己点" />
+          <div id="httpFields">
+            <label>JSON 里的 source 字段</label>
+            <input id="srcKey" placeholder="my-band" />
+            <label>默认写入哪条事实</label>
+            <select id="srcFact">
+              <option value="presence">在床/有人</option>
+              <option value="motion">体动</option>
+              <option value="stage">睡眠状态</option>
+            </select>
+          </div>
+          <div class="btns">
+            <button id="addSource" type="button">接入这个源</button>
+          </div>
+          <p class="hint" id="curlHint">把下面发给你的脚本。试发不必等硬件。</p>
+          <pre id="curl" class="curl"></pre>
+          <label>试发一条（可改）</label>
+          <textarea id="testBody" rows="4"></textarea>
+          <div class="btns tight">
+            <button id="testSend" class="ghost" type="button">发到本中控</button>
+          </div>
+        </div>
+        </details>
+      </section>
+
+      <section class="card col-apply">
+        <h2>怎么叫醒</h2>
+        <p class="hint desk-only">对话里编译后会写入这里。也可以从模板手改。</p>
+        <p class="hint" id="nlReport"></p>
+        <ul class="gaps" id="nlGaps" hidden></ul>
+        <details class="m-fold" open>
+          <summary>从模板开始</summary>
+          <div id="presetLib" class="preset-grid"></div>
+        </details>
+        <div class="recipe-head">
+          <div>
+            <label>当前方案名</label>
+            <input id="recipeName" />
+            <p class="hint" id="recipeNote" hidden></p>
+          </div>
+          <button id="resetGiven" class="ghost" type="button">换成空白方案</button>
+        </div>
+        <div id="steps" class="steps"></div>
+        <div class="btns">
+          <select id="newStep">
+            <option value="wait_until">等到墙上时钟</option>
+            <option value="wait_near">接近起床时间</option>
+            <option value="wait_minutes">再等几分钟</option>
+            <option value="wait_seconds">再等几秒</option>
+            <option value="wait_fact">等到某个事实</option>
+            <option value="screen_dawn">屏幕黎明</option>
+            <option value="pc_beep">电脑响铃</option>
+            <option value="notify">系统通知</option>
+            <option value="log">记一条日志</option>
+            <option value="http_out">HTTP 发出</option>
+            <option value="led_dawn">LED 灯带</option>
+          </select>
+          <button id="addStep" type="button">加一步</button>
+        </div>
+      </section>
+
+      <section class="card tonight">
+        <h2>今夜</h2>
+        <ol class="pitch desk-only" aria-label="三句口播">
+          <li>采集是我指定的，叫醒也是我指定的。</li>
+          <li>换的是谁来写事实，不是换产品。</li>
+          <li>执行器也是契约，不是焊死的灯。</li>
+        </ol>
+        <p class="hint desk-only">压缩试跑把时钟压成秒。本机一键三幕第三幕等体动才亮；雷达没跑也不会自动亮。空桌示例请点「播一段」。</p>
+        <div class="now-board" aria-label="当前事实">
+          <div class="now-cell" id="nowPresenceCell">
+            <span>在床</span>
+            <b id="nowPresence">—</b>
+          </div>
+          <div class="now-cell" id="nowMotionCell">
+            <span>体动</span>
+            <b id="nowMotion">—</b>
+          </div>
+          <div class="now-cell" id="nowStageCell">
+            <span>状态</span>
+            <b id="nowStage">—</b>
+          </div>
+        </div>
+        <div class="btns">
+          <button id="threeActs" type="button">一键三幕</button>
+          <button id="arm" type="button">开始守夜</button>
+          <button id="test" type="button">压缩试跑</button>
+          <button id="cancel" class="ghost" type="button" disabled>取消</button>
+        </div>
+        <figure class="lan-qr" id="lanQrWrap">
+          <img id="lanQr" src="qr-v3.svg" alt="扫码打开公网页" width="180" height="180" />
+          <figcaption id="lanQrUrl">https://sleep-hub.vercel.app/v3</figcaption>
+          <p class="hint" id="lanQrNote">扫码打开公网页，不必同一 Wi‑Fi。</p>
+        </figure>
+        <details class="m-fold" open>
+          <summary>日志与推送</summary>
+        <h3>最近事件</h3>
+        <div id="inbox" class="inbox"></div>
+        <h3>日志</h3>
+        <div class="log" id="log"></div>
+        <label>手机推送主题（ntfy）</label>
+        <input id="ntfyTopic" spellcheck="false" />
+        <p class="hint" id="ntfyHint"></p>
+        <p class="lan" id="lanHint">局域网地址在启动后显示。</p>
+        <div class="btns tight">
+          <button id="beepNow" class="ghost" type="button">试响一声</button>
+        </div>
+        <p class="hint">插电，电源里关掉睡眠。点守夜或试跑后才会出声。</p>
+        </details>
+      </section>
+    </div>
+  </div>
+
+  <aside class="chat-dock card col-chat" id="chatDock">
+    <header class="chat-head">
+      <div>
+        <p class="kicker">DeepSeek</p>
+        <h2>编译对话</h2>
+      </div>
+      <button type="button" class="ghost tiny" id="chatClear">清空</button>
+    </header>
+    <p class="hint" id="chatHint">可把 jsonl、日志、说明、截图拖进来。说「编译进中控」就会写入方案。</p>
+    <div class="chat-log" id="chatLog" role="log"></div>
+    <div class="chat-files" id="chatFiles" hidden></div>
+    <form class="chat-composer" id="chatForm">
+      <textarea id="chatInput" rows="2" placeholder="怎么采集、怎么叫醒；或问附件里写了什么"></textarea>
+      <div class="chat-ops">
+        <input id="chatFile" type="file" multiple hidden />
+        <button type="button" class="ghost" id="chatAttach">附件</button>
+        <button type="submit" id="chatSend">发送</button>
+      </div>
+    </form>
+  </aside>
+  </div>
+  <script src="hub.js?v=20"></script>
+  <script src="bus.js?v=20"></script>
+  <script src="runner.js?v=20"></script>
+  <script src="app.js?v=20"></script>
+  <script src="chat.js?v=20"></script>
+</body>
+</html>
